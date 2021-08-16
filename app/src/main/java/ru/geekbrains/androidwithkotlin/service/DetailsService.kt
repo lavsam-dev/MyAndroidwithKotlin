@@ -16,8 +16,7 @@ import java.net.URL
 import java.util.stream.Collectors
 import javax.net.ssl.HttpsURLConnection
 
-const val LATITUDE_EXTRA = "Latitude"
-const val LONGITUDE_EXTRA = "Longitude"
+const val REQUEST_CITY = "RequestCity"
 private const val REQUEST_GET = "GET"
 private const val REQUEST_TIMEOUT = 10000
 private const val YOUR_API_KEY = "475de630fc0048e30e409a068afd8132"//BuildConfig.WEATHER_API_KEY
@@ -31,21 +30,20 @@ class DetailsService(name: String = "DetailService") : IntentService(name) {
         if (intent == null) {
             onEmptyIntent()
         } else {
-            val lat = intent.getDoubleExtra(LATITUDE_EXTRA, 0.0)
-            val lon = intent.getDoubleExtra(LONGITUDE_EXTRA, 0.0)
-            if (lat == 0.0 && lon == 0.0) {
+            val city = intent.getStringExtra(REQUEST_CITY)
+            if (city == null) {
                 onEmptyData()
             } else {
-                loadWeather(lat.toString(), lon.toString())
+                loadWeather(city)
             }
         }
     }
 
     @RequiresApi(Build.VERSION_CODES.N)
-    private fun loadWeather(lat: String, lon: String) {
+    private fun loadWeather(city: String) {
         try {
             val uri =
-                URL("https://api.openweathermap.org/data/2.5/weather?q=${weatherBundle.city.city}&appid=${YOUR_API_KEY}&units=metric&lang=ru")
+                URL("https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${YOUR_API_KEY}&units=metric&lang=ru")
             lateinit var urlConnection: HttpsURLConnection
             try {
                 urlConnection = uri.openConnection() as HttpsURLConnection
@@ -76,19 +74,19 @@ class DetailsService(name: String = "DetailService") : IntentService(name) {
     }
 
     private fun onResponse(weatherDTO: WeatherDTO) {
-        val fact = weatherDTO.fact
+        val fact = weatherDTO.main
         if (fact == null) {
             onEmptyResponse()
         } else {
-            onSuccessResponse(fact.temp, fact.feels_like, fact.condition)
+            onSuccessResponse(fact.temp, fact.feels_like, fact.pressure)
         }
     }
 
-    private fun onSuccessResponse(temp: Int?, feelsLike: Int?, condition: String?) {
+    private fun onSuccessResponse(temp: Double?, feelsLike: Double?, pressure: Int?) {
         putLoadResult(DETAILS_RESPONSE_SUCCESS_EXTRA)
         broadcastIntent.putExtra(DETAILS_TEMP_EXTRA, temp)
         broadcastIntent.putExtra(DETAILS_FEELS_LIKE_EXTRA, feelsLike)
-        broadcastIntent.putExtra(DETAILS_CONDITION_EXTRA, condition)
+        broadcastIntent.putExtra(DETAILS_PRESSURE_EXTRA, pressure)
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcastIntent)
     }
 
@@ -121,6 +119,5 @@ class DetailsService(name: String = "DetailService") : IntentService(name) {
 
     private fun putLoadResult(result: String) {
         broadcastIntent.putExtra(DETAILS_LOAD_RESULT_EXTRA, result)
-
     }
 }
